@@ -78,7 +78,7 @@ from ..providers.asyncio import to_sync_generator
 from ..errors import MissingRequirementsError
 from .. import debug
 
-PLAIN_FILE_EXTENSIONS = ["txt", "xml", "json", "js", "har", "sh", "py", "php", "css", "yaml", "sql", "log", "csv", "twig", "md"]
+PLAIN_FILE_EXTENSIONS = ["txt", "xml", "json", "js", "har", "sh", "py", "php", "css", "yaml", "sql", "log", "csv", "twig", "md", "arc"]
 PLAIN_CACHE = "plain.cache"
 DOWNLOADS_FILE = "downloads.json"
 FILE_LIST = "files.txt"
@@ -431,7 +431,7 @@ async def download_urls(
         connector=get_connector(proxy=proxy),
         timeout=ClientTimeout(timeout)
     ) as session:
-        async def download_url(url: str) -> str:
+        async def download_url(url: str, max_depth: int) -> str:
             try:
                 async with session.get(url) as response:
                     response.raise_for_status()
@@ -457,7 +457,7 @@ async def download_urls(
             except (ClientError, asyncio.TimeoutError) as e:
                 debug.log(f"Download failed: {e.__class__.__name__}: {e}")
             return None
-        for filename in await asyncio.gather(*[download_url(url) for url in urls]):
+        for filename in await asyncio.gather(*[download_url(url, max_depth) for url in urls]):
             if filename:
                 yield filename
             else:

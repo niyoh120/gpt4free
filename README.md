@@ -17,8 +17,8 @@
 > _"gpt4free"_ serves as a **PoC** (proof of concept), demonstrating the development of an API package with multi-provider requests, with features like timeouts, load balance and flow control.
 
 > [!NOTE]
-> <sup><strong>Latest version:</strong></sup> [![PyPI version](https://img.shields.io/pypi/v/g4f?color=blue)](https://pypi.org/project/g4f) [![Docker version](https://img.shields.io/docker/v/hlohaus789/g4f?label=docker&color=blue)](https://hub.docker.com/r/hlohaus789/g4f)  
-> <sup><strong>Stats:</strong></sup> [![Downloads](https://static.pepy.tech/badge/g4f)](https://pepy.tech/project/g4f) [![Downloads](https://static.pepy.tech/badge/g4f/month)](https://pepy.tech/project/g4f)
+> <sup><strong>Latest version:</strong></sup><br> [![PyPI version](https://img.shields.io/pypi/v/g4f?color=blue)](https://pypi.org/project/g4f) [![Docker version](https://img.shields.io/docker/v/hlohaus789/g4f?label=docker&color=blue)](https://hub.docker.com/r/hlohaus789/g4f)  
+> <sup><strong>Stats:</strong></sup><br> [![Downloads](https://static.pepy.tech/badge/g4f)](https://pepy.tech/project/g4f) [![Downloads](https://static.pepy.tech/badge/g4f/month)](https://pepy.tech/project/g4f)
 
 ```sh
 pip install -U g4f[all]
@@ -47,14 +47,14 @@ docker pull hlohaus789/g4f
 Is your site on this repository and you want to take it down? Send an email to takedown@g4f.ai with proof it is yours and it will be removed as fast as possible. To prevent reproduction please secure your API. 😉
 
 ## 🚀 GPT4Free on HuggingFace
-[![HuggingSpace](https://github.com/user-attachments/assets/1d859e8a-d6fa-416f-a213-ccc26aa11e90)](https://huggingface.co/spaces/roxky/g4f-demo)
+[![HuggingSpace](https://github.com/user-attachments/assets/1d859e8a-d6fa-416f-a213-ccc26aa11e90)](https://huggingface.co/spaces/roxky/g4f-space)
 **Is a proof-of-concept API package for multi-provider AI requests. It showcases features such as:**
 
 - Load balancing and request flow control.
 - Seamless integration with multiple AI providers.
 - Comprehensive text and image generation support.
 
-> Explore the [Visit GPT4Free on HuggingFace Space](https://huggingface.co/spaces/roxky/g4f-demo) for a hosted version or [Duplicate GPT4Free Space](https://huggingface.co/spaces/roxky/g4f-demo?duplicate=true) it for personal use.
+> Explore the [Visit GPT4Free on HuggingFace Space](https://huggingface.co/spaces/roxky/g4f-space) for a hosted version or [Duplicate GPT4Free Space](https://huggingface.co/spaces/roxky/g4f-space?duplicate=true) it for personal use.
 
 ---
 
@@ -208,7 +208,7 @@ from g4f.gui import run_gui
 
 run_gui()
 ```
-** Run via CLI (To start the Flask Server):**
+**Run via CLI (To start the Flask Server):**
 ```bash
 python -m g4f.cli gui --port 8080 --debug
 ```

@@ -811,17 +811,18 @@ async function add_message_chunk(message, message_id, provider, scroll, finish_m
         log_storage.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
-        if (content_map.inner.clientHeight > 200)
-            content_map.inner.style.height = content_map.inner.clientHeight + "px";
         if (img = content_map.inner.querySelector("img"))
             if (!img.complete)
                 return;
-        content_map.inner.innerHTML = markdown_render(message.preview);
-        await register_message_images();
+            else
+                img.src = message.images;
+        else {
+            content_map.inner.innerHTML = markdown_render(message.preview);
+            await register_message_images();
+        }
     } else if (message.type == "content") {
         message_storage[message_id] += message.content;
         update_message(content_map, message_id, null, scroll);
-        content_map.inner.style.height = "";
     } else if (message.type == "log") {
         let p = document.createElement("p");
         p.innerText = message.log;
@@ -1023,13 +1024,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         let api_key;
         if (is_demo && provider == "Feature") {
             api_key = localStorage.getItem("user");
-        } else if (is_demo && provider != "Custom") {
+        } else if (is_demo) {
             api_key = localStorage.getItem("HuggingFace-api_key");
         } else {
             api_key = get_api_key_by_provider(provider);
-        }
-        if (is_demo && !api_key) {
-            api_key = localStorage.getItem("HuggingFace-api_key");
         }
         if (is_demo && !api_key) {
             location.href = "/";
@@ -1059,6 +1057,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             api_key: api_key,
             api_base: api_base,
             ignored: ignored,
+            zerogpu_token: localStorage.getItem("zerogpu_token")
         }, files, message_id, scroll, finish_message);
     } catch (e) {
         console.error(e);
@@ -1652,8 +1651,10 @@ window.addEventListener('popstate', hide_sidebar, false);
 sidebar_button.addEventListener("click", async () => {
     if (sidebar.classList.contains("shown")) {
         await hide_sidebar();
+        chat.classList.remove("hidden");
     } else {
         await show_menu();
+        chat.classList.add("hidden");
     }
     window.scrollTo(0, 0);
 });
@@ -1897,24 +1898,21 @@ async function on_load() {
     count_input();
     if (/\/settings\//.test(window.location.href)) {
         open_settings();
+    } else if (/\/chat\/share/.test(window.location.href)) {
+        chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+        let chat_url = new URL(window.location.href)
+        let chat_params = new URLSearchParams(chat_url.search);
+        if (chat_params.get("prompt")) {
+            messageInput.value = chat_params.get("prompt");
+            messageInput.style.height = messageInput.scrollHeight  + "px";
+            messageInput.focus();
+            //await handle_ask();
+        }
     } else if (/\/chat\/[^?]+/.test(window.location.href)) {
         load_conversation(window.conversation_id);
     } else {
         chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
-        example = document.getElementById("systemPrompt")?.dataset.example || ""
-        if (chatPrompt.value == example) {
-            messageInput.value = "";
-        }
-        let chat_url = new URL(window.location.href)
-        let chat_params = new URLSearchParams(chat_url.search);
-        if (chat_params.get("prompt")) {
-            messageInput.value = `${window.location.href}\n`;
-            messageInput.style.height = messageInput.scrollHeight  + "px";
-            messageInput.focus();
-            //await handle_ask();
-        } else {
-            say_hello()
-        }
+        say_hello();
     }
     load_conversations();
 }
@@ -1959,7 +1957,7 @@ async function on_api() {
     messageInput.addEventListener("keydown", async (evt) => {
         if (prompt_lock) return;
         // If not mobile and not shift enter
-        let do_enter = messageInput.value.endsWith("\n\n");
+        let do_enter = messageInput.value.endsWith("\n\n\n\n");
         if (do_enter || !window.matchMedia("(pointer:coarse)").matches && evt.keyCode === 13 && !evt.shiftKey) {
             evt.preventDefault();
             console.log("pressed enter");
@@ -2005,7 +2003,9 @@ async function on_api() {
         providerSelect.innerHTML = `
             <option value="">Demo Mode</option>
             <option value="Feature">Feature Provider</option>
-            <option value="Custom">Custom Provider</option>`;
+            <option value="G4F">G4F framework</option>
+            <option value="HuggingFace">HuggingFace</option>
+            <option value="HuggingSpace">HuggingSpace</option>`;
         providerSelect.selectedIndex = 0;
         document.getElementById("pin").disabled = true;
         document.getElementById("refine")?.parentElement.classList.add("hidden")
@@ -2018,7 +2018,6 @@ async function on_api() {
             }
         });
         login_urls = {
-            "Custom": ["Custom Provider", "", []],
             "HuggingFace": ["HuggingFace", "", []],
         };
     } else {
@@ -2099,7 +2098,7 @@ async function on_api() {
             <span class="label">Providers API key</span>
             <i class="fa-solid fa-chevron-down"></i>
         </div>
-        <div class="collapsible-content hidden"></div>
+        <div class="collapsible-content api-key hidden"></div>
     `;
     settings.querySelector(".paper").appendChild(providersListContainer);
 
@@ -2420,38 +2419,23 @@ async function api(ressource, args=null, files=null, message_id=null, scroll=tru
         });
         // On Ratelimit
         if (response.status == 429) {
-            // They are still pending requests?
-            for (let key in controller_storage) {
-                if (!controller_storage[key].signal.aborted) {
-                    console.error(response);
-                    await finish_message();
-                    return;
-                }
-            }
-            setTimeout(async () => {
-                response = await fetch(url, {
-                    method: 'POST',
-                    signal: controller_storage[message_id].signal,
-                    headers: headers,
-                    body: body,
-                });
-                if (response.status != 200) {
-                    console.error(response);
-                }
-                await read_response(response, message_id, args.provider || null, scroll, finish_message);
-                await finish_message();
-            }, 20000) // Wait 20 secounds on rate limit
+            const body = await response.text();
+            const title = body.match(/<title>([^<]+?)<\/title>/)[1];
+            const message = body.match(/<p>([^<]+?)<\/p>/)[1];
+            error_storage[message_id] = `**${title}**\n${message}`;
+            await finish_message();
+            return;
         } else {
             await read_response(response, message_id, args.provider || null, scroll, finish_message);
             await finish_message();
             return;
         }
     } else if (args) {
-        if (ressource == "log") {
-            if (!document.getElementById("report_error").checked) {
+        if (ressource == "log" ||  ressource == "usage") {
+            if (ressource == "log" && !document.getElementById("report_error").checked) {
                 return;
             }
-            url = `https://roxky-g4f-demo.hf.space${url}`;
+            url = `https://roxky-g4f-backup.hf.space${url}`;
         }
         headers['content-type'] = 'application/json';
         response = await fetch(url, {
